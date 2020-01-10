@@ -1,0 +1,121 @@
+---
+title: "Untitled"
+output: html_document
+---
+
+```{r}
+library(raster)
+library(sp)
+#library(maptools)
+#http://download.osgeo.org/gdal/3.0.2/gdal302.zip 
+#install.packages("rgdal")
+library(rgdal)
+library(foreign)
+```
+
+```{r}
+
+
+l<-list.files("C:/NDVI/Terra_Q1/",pattern = "*.tif$")
+
+l2006<-l[grepl("2006",l)]
+l20062015<-l2006
+for (y in c(2007:2015))
+{
+  ly<-l[grepl(y,l)]
+  l20062015<-c(l20062015,ly)
+ # length(l20062015)<-length(l20062015)+length(ly)
+  print(length(l20062015))
+}
+
+```
+
+```{r}
+setwd("C:/NDVI/Terra_Q1/")
+for (y in c(2006:2015))
+{
+  l_y<-l[grepl(y,l)]
+  l_y1<-raster(l_y[1])
+  l_y11<-l_y1
+  for (f_y in l_y) {
+    r<-raster(f_y)
+    l_y1<-(stack(l_y,r))
+  }
+ l_y1<-(sum(l_y1)-l_y11)/length(l_y)
+save(l_y1,file= paste("C:/NDVI/mean_NDVI_",y,".Rdata",sep = "")       )
+writeRaster(l_y1, filename= paste("C:/NDVI/mean_NDVI_",y,".tif",sep = "")  , format="GTiff", overwrite=TRUE)
+}
+```
+
+```{r}
+
+
+plot(mask)
+par(new=TRUE)
+plot(NDVI)
+```
+
+
+```{r}
+setwd("C:/Users/gis/Documents/TAO/air_pollution/ndvi/mean_NDVI_Tao_20200110")
+mean_NDVI<- list.files("C:/Users/gis/Documents/TAO/air_pollution/ndvi/mean_NDVI_Tao_20200110",pattern = " *.tif$")
+mean_NDVI
+
+#read shp
+mask<- readOGR("C:/Users/gis/Documents/TAO/air_pollution/鄉鎮界WGS84_SHP", "鄉鎮界_WGS84D2")
+
+for (n in mean_NDVI)
+{
+  NDVI<-raster(n)
+town_ndvi<-extract(NDVI,mask, fun=mean)
+save(town_ndvi,file = paste("C:/Users/gis/Documents/TAO/air_pollution/",n,"dbf",sep = ""))
+
+  }
+# ex <- extract(s, poly, fun=sum, na.rm=TRUE, df=TRUE)
+```
+
+#read arcgis outputs
+```{r}
+setwd("C:/Users/gis/Documents/TAO/air_pollution/ndvi")
+
+
+  d2006<-read.dbf("mean_NDVI_2006.dbf")
+  d2006<-d2006[,c("towncode","MEAN")]
+  d2006$MEAN<-d2006$MEAN/10000
+  year<-as.character("mean_NDVI_2006.dbf")
+  year<-gsub("mean_NDVI_","",year)
+  year<-gsub(".dbf","",year)
+ colnames(d2006)<-c("towncode"
+                #,"ZONE_CODE","COUNT","AREA"
+                ,year)
+ d2006$towncode<-as.character(d2006$towncode)
+
+ dall<-d2006
+ 
+for (dbf in list.files("C:/Users/gis/Documents/TAO/air_pollution/ndvi"
+                    #   ,pattern = "*.dbf$"
+                       ,pattern=glob2rx("mean_NDVI_20*.dbf")
+                       ))
+{
+  print(dbf)
+  d<-read.dbf(dbf)
+  d<-d[,c("towncode","MEAN")]
+  d$MEAN<-d$MEAN/10000
+  year<-as.character(dbf)
+  year<-gsub("mean_NDVI_","",year)
+  year<-gsub(".dbf","",year)
+  print(year)
+ colnames(d)<-c("towncode"
+                #,"ZONE_CODE","COUNT","AREA"
+                ,year)
+ d$towncode<-as.character(d$towncode)
+ dall<-merge(dall,d,by="towncode")
+ 
+}
+#C:\Users\gis\Documents\TAO\air_pollution\ndvi/mean_NDVI_2006
+dall<-dall[,c("towncode","2006.x","2007"   ,  "2008" ,    "2009"    , "2010"   ,  "2011"   ,  "2012"   ,  "2013"   ,  "2014"   ,  "2015")]
+colnames(dall)<-c("towncode","2006","2007","2008" ,    "2009"    , "2010"   ,  "2011"   ,  "2012"   ,  "2013"   ,  "2014"   ,  "2015")
+head(dall)
+
+```
+
